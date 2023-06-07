@@ -36,43 +36,41 @@ function Footer({ author }: { author: string }) {
   );
 }
 
-function BlogPostPage({
-  postSlug,
-  postContent,
-}: {
-  postSlug: string;
-  postContent: string;
-}) {
-  return (
-    <section>
-      <h2>
-        <a href={"/" + postSlug}>{postSlug}</a>
-      </h2>
-      <article>{postContent}</article>
-    </section>
-  );
+function BlogPostPage({ postSlug }: { postSlug: string }) {
+  return <Post slug={postSlug} />;
 }
 
-function BlogIndexPage({
-  postSlugs,
-  postContents,
-}: {
-  postSlugs: string[];
-  postContents: string[];
-}) {
+async function BlogIndexPage() {
+  const postFiles = await readdir("./posts");
+  const postSlugs = postFiles.map((file) =>
+    file.slice(0, file.lastIndexOf("."))
+  );
+
   return (
     <section>
       <h1>Welcome to my blog</h1>
       <div>
-        {postSlugs.map((postSlug, index) => (
-          <section key={postSlug}>
-            <h2>
-              <a href={"/" + postSlug}>{postSlug}</a>
-            </h2>
-            <article>{postContents[index]}</article>
-          </section>
+        {postSlugs.map((slug) => (
+          <Post key={slug} slug={slug} />
         ))}
       </div>
+    </section>
+  );
+}
+
+async function Post({ slug }: { slug: string }) {
+  let content;
+  try {
+    content = await readFile("./posts/" + slug + ".txt", "utf8");
+  } catch (err) {
+    throwNotFound(err as any);
+  }
+  return (
+    <section>
+      <h2>
+        <a href={"/" + slug}>{slug}</a>
+      </h2>
+      <article>{content}</article>
     </section>
   );
 }
@@ -80,10 +78,7 @@ function BlogIndexPage({
 createServer(async (req, res) => {
   try {
     const url = new URL(req.url!, `http://${req.headers.host}`);
-    // Match the URL to a page and load the data it needs.
-    const page = await matchRoute(url);
-    // Wrap the matched page into the shared layout.
-    sendHTML(res, <BlogLayout>{page}</BlogLayout>);
+    await sendHTML(res, <Router url={url} />);
   } catch (err) {
     console.error(err);
     res.statusCode = (err as any).statusCode ?? 500;
@@ -91,34 +86,15 @@ createServer(async (req, res) => {
   }
 }).listen(8080);
 
-async function matchRoute(url: URL): Promise<ReactNode> {
+function Router({ url }: { url: URL }) {
+  let page;
   if (url.pathname === "/") {
-    // We're on the index route which shows every blog post one by one.
-    // Read all the files in the posts folder, and load their contents.
-    const postFiles = await readdir("./posts");
-    const postSlugs = postFiles.map((file) =>
-      file.slice(0, file.lastIndexOf("."))
-    );
-    const postContents = await Promise.all(
-      postSlugs.map((postSlug) =>
-        readFile("./posts/" + postSlug + ".txt", "utf8")
-      )
-    );
-    return <BlogIndexPage postSlugs={postSlugs} postContents={postContents} />;
+    page = <BlogIndexPage />;
   } else {
-    // We're showing an individual blog post.
-    // Read the corresponding file from the posts folder.
     const postSlug = sanitizeFilename(url.pathname.slice(1));
-    try {
-      const postContent = await readFile(
-        "./posts/" + postSlug + ".txt",
-        "utf8"
-      );
-      return <BlogPostPage postSlug={postSlug} postContent={postContent} />;
-    } catch (err) {
-      throwNotFound(err as any);
-    }
+    page = <BlogPostPage postSlug={postSlug} />;
   }
+  return <BlogLayout>{page}</BlogLayout>;
 }
 
 function throwNotFound(cause: Error): never {
@@ -127,13 +103,13 @@ function throwNotFound(cause: Error): never {
   throw notFound;
 }
 
-function sendHTML(
+async function sendHTML(
   res: ServerResponse<IncomingMessage> & {
     req: IncomingMessage;
   },
   jsx: ReactNode
 ) {
-  const html = renderJSXToHTML(jsx);
+  const html = await renderJSXToHTML(jsx);
   res.setHeader("Content-Type", "text/html");
   res.end(html);
 }

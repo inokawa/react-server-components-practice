@@ -4,7 +4,7 @@ import escapeHtml from "escape-html";
 const isReactElement = (jsx: any): jsx is ReactElement =>
   jsx.$$typeof === Symbol.for("react.element");
 
-export function renderJSXToHTML(jsx: ReactNode): string {
+export async function renderJSXToHTML(jsx: ReactNode): Promise<string> {
   if (typeof jsx === "string" || typeof jsx === "number") {
     // This is a string. Escape it and put it into HTML directly.
     return escapeHtml(String(jsx));
@@ -13,7 +13,9 @@ export function renderJSXToHTML(jsx: ReactNode): string {
     return "";
   } else if (Array.isArray(jsx)) {
     // This is an array of nodes. Render each into HTML and concatenate.
-    return jsx.map((child) => renderJSXToHTML(child)).join("");
+    return (await Promise.all(jsx.map((child) => renderJSXToHTML(child)))).join(
+      ""
+    );
   } else if (typeof jsx === "object") {
     // Check if this object is a React JSX element (e.g. <div />).
     if (isReactElement(jsx)) {
@@ -29,15 +31,17 @@ export function renderJSXToHTML(jsx: ReactNode): string {
           }
         }
         html += ">";
-        html += renderJSXToHTML(jsx.props.children);
+        html += await renderJSXToHTML(jsx.props.children);
         html += "</" + jsx.type + ">";
         return html;
       } else if (typeof jsx.type === "function") {
         // Is it a component like <BlogPostPage>?
         // Call the component with its props, and turn its returned JSX into HTML.
-        const Component = jsx.type as (props: any) => ReactNode;
+        const Component = jsx.type as (
+          props: any
+        ) => ReactNode | Promise<ReactNode>;
         const props = jsx.props;
-        const returnedJsx = Component(props);
+        const returnedJsx = await Component(props);
         return renderJSXToHTML(returnedJsx);
       } else throw new Error("Not implemented.");
     } else throw new Error("Cannot render an object.");
