@@ -2,6 +2,7 @@ import { IncomingMessage, ServerResponse, createServer } from "http";
 import { readFile } from "fs/promises";
 import escapeHtml from "escape-html";
 import { ReactNode } from "react";
+import { ReactElement } from "react";
 
 createServer(async (_req, res) => {
   const author = "Jae Doe";
@@ -42,6 +43,9 @@ function sendHTML(
   res.end(html);
 }
 
+const isReactElement = (jsx: any): jsx is ReactElement =>
+  jsx.$$typeof === Symbol.for("react.element");
+
 function renderJSXToHTML(jsx: ReactNode): string {
   if (typeof jsx === "string" || typeof jsx === "number") {
     // This is a string. Escape it and put it into HTML directly.
@@ -54,7 +58,7 @@ function renderJSXToHTML(jsx: ReactNode): string {
     return jsx.map((child) => renderJSXToHTML(child)).join("");
   } else if (typeof jsx === "object") {
     // Check if this object is a React JSX element (e.g. <div />).
-    if (jsx.$$typeof === Symbol.for("react.element")) {
+    if (isReactElement(jsx)) {
       // Turn it into an an HTML tag.
       let html = "<" + jsx.type;
       for (const propName in jsx.props) {
