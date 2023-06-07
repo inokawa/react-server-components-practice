@@ -3,13 +3,8 @@ import { readFile } from "fs/promises";
 import { ReactNode } from "react";
 import { renderJSXToHTML } from "./jsx";
 
-function BlogPostPage({
-  postContent,
-  author,
-}: {
-  postContent: string;
-  author: string;
-}) {
+function BlogLayout({ children }: { children: ReactNode }) {
+  const author = "Jae Doe";
   return (
     <html>
       <head>
@@ -20,10 +15,27 @@ function BlogPostPage({
           <a href="/">Home</a>
           <hr />
         </nav>
-        <article>{postContent}</article>
+        <main>{children}</main>
         <Footer author={author} />
       </body>
     </html>
+  );
+}
+
+function BlogPostPage({
+  // postSlug,
+  postContent,
+}: {
+  // postSlug: string;
+  postContent: string;
+}) {
+  return (
+    <section>
+      {/* <h2>
+        <a href={"/" + postSlug}>{postSlug}</a>
+      </h2> */}
+      <article>{postContent}</article>
+    </section>
   );
 }
 
@@ -41,9 +53,13 @@ function Footer({ author }: { author: string }) {
 }
 
 createServer(async (_req, res) => {
-  const author = "Jae Doe";
   const postContent = await readFile("./posts/hello-world.txt", "utf8");
-  sendHTML(res, <BlogPostPage postContent={postContent} author={author} />);
+  sendHTML(
+    res,
+    <BlogLayout>
+      <BlogPostPage postContent={postContent} />
+    </BlogLayout>
+  );
 }).listen(8080);
 
 function sendHTML(
