@@ -124,14 +124,34 @@ async function sendScript(res: Resp, filename: string) {
 
 async function sendJSX(res: Resp, jsx: ReactNode) {
   const clientJSX = await renderJSXToClientJSX(jsx);
-  const clientJSXString = JSON.stringify(clientJSX, null, 2);
+  const clientJSXString = JSON.stringify(clientJSX, stringifyJSX);
   res.setHeader("Content-Type", "application/json");
   res.end(clientJSXString);
 }
 
+function stringifyJSX(key: string, value: any) {
+  if (value === Symbol.for("react.element")) {
+    return "$RE";
+  } else if (typeof value === "string" && value.startsWith("$")) {
+    return "$" + value;
+  } else {
+    return value;
+  }
+}
+
 async function sendHTML(res: Resp, jsx: ReactNode) {
   let html = await renderJSXToHTML(jsx);
-  html += `<script type="module" src="client.js"></script>`;
+  html += `
+    <script type="importmap">
+      {
+        "imports": {
+          "react": "https://esm.sh/react@canary",
+          "react-dom/client": "https://esm.sh/react-dom@canary/client"
+        }
+      }
+    </script>
+    <script type="module" src="/client.js"></script>
+  `;
   res.setHeader("Content-Type", "text/html");
   res.end(html);
 }
