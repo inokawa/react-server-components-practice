@@ -141,6 +141,11 @@ function stringifyJSX(key: string, value: any) {
 
 async function sendHTML(res: Resp, jsx: ReactNode) {
   let html = await renderJSXToHTML(jsx);
+  const clientJSX = await renderJSXToClientJSX(jsx);
+  const clientJSXString = JSON.stringify(clientJSX, stringifyJSX);
+  html += `<script>window.__INITIAL_CLIENT_JSX_STRING__ = `;
+  html += JSON.stringify(clientJSXString).replace(/</g, "\\u003c");
+  html += `</script>`;
   html += `
     <script type="importmap">
       {
