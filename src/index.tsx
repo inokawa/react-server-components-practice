@@ -1,7 +1,7 @@
 import { IncomingMessage, ServerResponse, createServer } from "http";
 import { readFile, readdir } from "fs/promises";
 import { ReactNode } from "react";
-import { renderJSXToHTML } from "./jsx";
+import { renderJSXToClientJSX, renderJSXToHTML } from "./jsx";
 import sanitizeFilename from "sanitize-filename";
 
 function BlogLayout({ children }: { children: ReactNode }) {
@@ -99,6 +99,9 @@ createServer(async (req, res) => {
     const url = new URL(req.url!, `http://${req.headers.host}`);
     if (url.pathname === "/client.js") {
       await sendScript(res, "./client.js");
+    } else if (url.searchParams.has("jsx")) {
+      url.searchParams.delete("jsx");
+      await sendJSX(res, <Router url={url} />);
     } else {
       await sendHTML(res, <Router url={url} />);
     }
@@ -109,23 +112,24 @@ createServer(async (req, res) => {
   }
 }).listen(8080);
 
-async function sendScript(
-  res: ServerResponse<IncomingMessage> & {
-    req: IncomingMessage;
-  },
-  filename: string
-) {
+type Resp = ServerResponse<IncomingMessage> & {
+  req: IncomingMessage;
+};
+
+async function sendScript(res: Resp, filename: string) {
   const content = await readFile(filename, "utf8");
   res.setHeader("Content-Type", "text/javascript");
   res.end(content);
 }
 
-async function sendHTML(
-  res: ServerResponse<IncomingMessage> & {
-    req: IncomingMessage;
-  },
-  jsx: ReactNode
-) {
+async function sendJSX(res: Resp, jsx: ReactNode) {
+  const clientJSX = await renderJSXToClientJSX(jsx);
+  const clientJSXString = JSON.stringify(clientJSX, null, 2);
+  res.setHeader("Content-Type", "application/json");
+  res.end(clientJSXString);
+}
+
+async function sendHTML(res: Resp, jsx: ReactNode) {
   let html = await renderJSXToHTML(jsx);
   html += `<script type="module" src="client.js"></script>`;
   res.setHeader("Content-Type", "text/html");
