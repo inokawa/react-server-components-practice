@@ -17,20 +17,29 @@ export function renderJSXToHTML(jsx: ReactNode): string {
   } else if (typeof jsx === "object") {
     // Check if this object is a React JSX element (e.g. <div />).
     if (isReactElement(jsx)) {
-      // Turn it into an an HTML tag.
-      let html = "<" + jsx.type;
-      for (const propName in jsx.props) {
-        if (jsx.props.hasOwnProperty(propName) && propName !== "children") {
-          html += " ";
-          html += propName;
-          html += "=";
-          html += escapeHtml(jsx.props[propName]);
+      if (typeof jsx.type === "string") {
+        // Turn it into an an HTML tag.
+        let html = "<" + jsx.type;
+        for (const propName in jsx.props) {
+          if (jsx.props.hasOwnProperty(propName) && propName !== "children") {
+            html += " ";
+            html += propName;
+            html += "=";
+            html += escapeHtml(jsx.props[propName]);
+          }
         }
-      }
-      html += ">";
-      html += renderJSXToHTML(jsx.props.children);
-      html += "</" + jsx.type + ">";
-      return html;
+        html += ">";
+        html += renderJSXToHTML(jsx.props.children);
+        html += "</" + jsx.type + ">";
+        return html;
+      } else if (typeof jsx.type === "function") {
+        // Is it a component like <BlogPostPage>?
+        // Call the component with its props, and turn its returned JSX into HTML.
+        const Component = jsx.type as (props: any) => ReactNode;
+        const props = jsx.props;
+        const returnedJsx = Component(props);
+        return renderJSXToHTML(returnedJsx);
+      } else throw new Error("Not implemented.");
     } else throw new Error("Cannot render an object.");
   } else throw new Error("Not implemented.");
 }
