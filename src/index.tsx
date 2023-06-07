@@ -15,6 +15,8 @@ function BlogLayout({ children }: { children: ReactNode }) {
         <nav>
           <a href="/">Home</a>
           <hr />
+          <input />
+          <hr />
         </nav>
         <main>{children}</main>
         <Footer author={author} />
@@ -75,17 +77,6 @@ async function Post({ slug }: { slug: string }) {
   );
 }
 
-createServer(async (req, res) => {
-  try {
-    const url = new URL(req.url!, `http://${req.headers.host}`);
-    await sendHTML(res, <Router url={url} />);
-  } catch (err) {
-    console.error(err);
-    res.statusCode = (err as any).statusCode ?? 500;
-    res.end();
-  }
-}).listen(8080);
-
 function Router({ url }: { url: URL }) {
   let page;
   if (url.pathname === "/") {
@@ -103,13 +94,40 @@ function throwNotFound(cause: Error): never {
   throw notFound;
 }
 
+createServer(async (req, res) => {
+  try {
+    const url = new URL(req.url!, `http://${req.headers.host}`);
+    if (url.pathname === "/client.js") {
+      await sendScript(res, "./client.js");
+    } else {
+      await sendHTML(res, <Router url={url} />);
+    }
+  } catch (err) {
+    console.error(err);
+    res.statusCode = (err as any).statusCode ?? 500;
+    res.end();
+  }
+}).listen(8080);
+
+async function sendScript(
+  res: ServerResponse<IncomingMessage> & {
+    req: IncomingMessage;
+  },
+  filename: string
+) {
+  const content = await readFile(filename, "utf8");
+  res.setHeader("Content-Type", "text/javascript");
+  res.end(content);
+}
+
 async function sendHTML(
   res: ServerResponse<IncomingMessage> & {
     req: IncomingMessage;
   },
   jsx: ReactNode
 ) {
-  const html = await renderJSXToHTML(jsx);
+  let html = await renderJSXToHTML(jsx);
+  html += `<script type="module" src="client.js"></script>`;
   res.setHeader("Content-Type", "text/html");
   res.end(html);
 }
