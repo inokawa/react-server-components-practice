@@ -1,0 +1,29 @@
+{
+  "name": "react-server-components-practice",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "tsx src/index.tsx",
+    "tsc": "tsc -p . --noEmit"
+  },
+  "devDependencies": {
+    "@types/escape-html": "^1.0.2",
+    "@types/node": "20.2.5",
+    "@types/react": "^18.2.8",
+    "@types/react-dom": "^18.2.4",
+    "escape-html": "1.0.3",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "tsx": "3.12.7",
+    "typescript": "^5.0.4"
+  },
+  "author": "inokawa",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/inokawa/react-server-components-practice.git"
+  },
+  "bugs": {
+    "url": "https://github.com/inokawa/react-server-components-practice/issues"
+  },
+  "homepage": "https://github.com/inokawa/react-server-components-practice#readme"
+}
